@@ -27,8 +27,10 @@ sub public_handler {
     return unless $target eq "#terra_chat" or $target eq "#irc-hispano";
     pusher('public', $nick, $address, $target, $msg);
 
-    my @args = ("-b", "/home/wodim/cobe-terra/cobe-public.brain", "learn-single", $msg);
-    system("cobe", @args);
+    if ($msg !~ m/http/i) {
+        my @args = ("-b", "/home/wodim/cobe-terra/cobe-public.brain", "learn-single", clean_colours($msg));
+        system("cobe", @args);
+    }
 }
 
 sub private_handler {
@@ -42,8 +44,10 @@ sub private_handler {
 
     pusher('private', $nick, $address, "", $msg);
 
-    my @args = ("-b", "/home/wodim/cobe-terra/cobe-private.brain", "learn-single", $msg);
-    system("cobe", @args);
+    if ($msg !~ m/http/i) {
+        my @args = ("-b", "/home/wodim/cobe-terra/cobe-private.brain", "learn-single", clean_colours($msg));
+        system("cobe", @args);
+    }
 }
 
 sub toalleitor {
@@ -51,7 +55,7 @@ sub toalleitor {
     my ($nick, $msg) = @$data;
     my $text;
 
-    my @args = ("-b", "/home/wodim/cobe-terra/cobe-private.brain", "oneliner", "--text", $msg);
+    my @args = ("-b", "/home/wodim/cobe-terra/cobe-private.brain", "oneliner", "--text", clean_colours($msg));
     my $text = capture("cobe", @args);
     Irssi::active_win()->command('msg '.$nick.' '.$text);
     delete $queue{$nick};
@@ -72,6 +76,15 @@ sub pusher {
     if (!$sth->execute()) {
         initialise_db();
     }
+}
+
+sub clean_colours {
+    my ($text) = @_;
+
+    $text =~ s/\x02|\x1f//;
+    $text =~ s/\x03\d\d?(,\d\d?)?//;
+
+    $text;
 }
 
 initialise_db();
