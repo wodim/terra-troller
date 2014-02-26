@@ -3,6 +3,7 @@ use strict;
 use vars qw($VERSION %IRSSI);
 
 use DBI;
+use IPC::System::Simple qw(capture system);
 
 $VERSION = '1.0';
 %IRSSI = (
@@ -22,48 +23,43 @@ sub initialise_db {
 
 sub public_handler {
     my ($server, $msg, $nick, $address, $target) = @_;
-    
+
     return unless $target eq "#terra_chat" or $target eq "#irc-hispano";
     pusher('public', $nick, $address, $target, $msg);
+
+    my @args = ("-b", "/home/wodim/cobe-terra/cobe-public.brain", "learn-single", $msg);
+    system("cobe", @args);
 }
 
 sub private_handler {
-    my ($server, $msg, $nick, $address, $target) = @_;
-    
+    my ($server, $msg, $nick, $address) = @_;
+
     if (!$queue{$nick} && $address !~ m/chathispano\.com$/) {
         my $rand_time = int(rand(10)) + 5;
-        Irssi::timeout_add_once($rand_time * 1000, 'toalleitor', $nick);
+        Irssi::timeout_add_once($rand_time * 1000, 'toalleitor', [$nick, $msg]);
         $queue{$nick} = 1;
     }
-    # pusher('private', $nick, $address, $target, $msg);
+
+    pusher('private', $nick, $address, "", $msg);
+
+    my @args = ("-b", "/home/wodim/cobe-terra/cobe-private.brain", "learn-single", $msg);
+    system("cobe", @args);
 }
 
 sub toalleitor {
-    my ($nick) = @_;
+    my ($data) = @_;
+    my ($nick, $msg) = @$data;
     my $text;
-    
-    do {
-        open(f, '/home/wodim/.irssi/scripts/toalla.txt') or Irssi::print "Error: no se pudo leer el archivo, fail.";
-        srand;
-        rand($.) < 1 && ($text = $_) while <f>;
-        close(f);
-    } while(length($text) < 1 || $text =~ m/NICK|CHAN|NETWORK|BBBBB|CCCCC|DDDDD|EEEEE/);
 
-    $nick =~ s/\s+$//;
-    $text =~ s/\\o/SALUDONAZI/g;
-    $text =~ s/\\%1%/, /g;
-    $text =~ s/\\/, /g;
-    $text =~ s/SALUDONAZI/\\o/g;
-    $text =~ s/^(%1%|AAAAA)\s//g;
-    $text =~ s/%1%|AAAAA/$nick/g;
-
+    my @args = ("-b", "/home/wodim/cobe-terra/cobe-private.brain", "oneliner", "--text", $msg);
+    my $text = capture("cobe", @args);
     Irssi::active_win()->command('msg '.$nick.' '.$text);
     delete $queue{$nick};
 }
 
 sub pusher {
     my ($table, $nick, $address, $target, $message) = @_;
-    
+
     my $sth = $dbh->prepare("
         INSERT INTO $table (nick, address, target, message, date)
         VALUES (?, ?, ?, ?, NOW())
@@ -72,7 +68,7 @@ sub pusher {
     $sth->bind_param(2, $address);
     $sth->bind_param(3, $target);
     $sth->bind_param(4, $message);
-    
+
     if (!$sth->execute()) {
         initialise_db();
     }
