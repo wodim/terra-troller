@@ -24,12 +24,13 @@ sub initialise_db {
 sub public_handler {
     my ($server, $msg, $nick, $address, $target) = @_;
 
-    return unless $target eq "#terra_chat" or $target eq "#irc-hispano";
     pusher('public', $nick, $address, $target, $msg);
+
+    return unless $target eq "#terra_chat";
 
     if ($msg !~ m/http/i) {
         my @args = ("-b", "/home/wodim/cobe-terra/cobe-public.brain", "learn-single", clean_colours($msg));
-        system("cobe", @args);
+        eval { system("cobe", @args); }; Irssi::print("Error generating a response...") if $@;
     }
 }
 
@@ -37,7 +38,8 @@ sub private_handler {
     my ($server, $msg, $nick, $address) = @_;
 
     if (!$queue{$nick} && $address !~ m/chathispano\.com$/) {
-        my $rand_time = int(rand(10)) + 5;
+        my $rand_time = int(rand(5)) + 5;
+        Irssi::print("Response for \x02$nick\x02 scheduled for \x02$rand_time\x02 seconds.");
         Irssi::timeout_add_once($rand_time * 1000, 'toalleitor', [$nick, $msg]);
         $queue{$nick} = 1;
     }
@@ -46,7 +48,7 @@ sub private_handler {
 
     if ($msg !~ m/http/i) {
         my @args = ("-b", "/home/wodim/cobe-terra/cobe-private.brain", "learn-single", clean_colours($msg));
-        system("cobe", @args);
+        eval { system("cobe", @args); }; Irssi::print("Error generating a response...") if $@;
     }
 }
 
@@ -56,8 +58,12 @@ sub toalleitor {
     my $text;
 
     my @args = ("-b", "/home/wodim/cobe-terra/cobe-private.brain", "oneliner", "--text", clean_colours($msg));
-    my $text = capture("cobe", @args);
-    Irssi::active_win()->command('msg '.$nick.' '.$text);
+    my $text = "";
+    eval { $text = capture("cobe", @args); }; Irssi::print("Error generating a response...") if $@;
+
+    if ($text ne "") {
+        Irssi::active_win()->command('msg '.$nick.' '.clean_colours($text));
+    }
     delete $queue{$nick};
 }
 
