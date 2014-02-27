@@ -18,7 +18,13 @@ $VERSION = '1.0';
 my ($dbh, %queue);
 
 sub initialise_db {
-    $dbh = DBI->connect('dbi:mysql:dbname=terra', 'terra', 'terra');
+    Irssi::print("Connecting to the database...");
+    eval {
+        $dbh = DBI->connect('dbi:mysql:dbname=terra', 'terra', 'terra');
+    }
+    if ($@) {
+        Irssi::print("Alright, I couldn't...");
+    }
 }
 
 sub public_handler {
@@ -79,16 +85,19 @@ sub toalleitor {
 sub pusher {
     my ($table, $nick, $address, $target, $message) = @_;
 
-    my $sth = $dbh->prepare("
-        INSERT INTO $table (nick, address, target, message, date)
-        VALUES (?, ?, ?, ?, NOW())
-    ");
-    $sth->bind_param(1, $nick);
-    $sth->bind_param(2, $address);
-    $sth->bind_param(3, $target);
-    $sth->bind_param(4, $message);
-
-    if (!$sth->execute()) {
+    eval {
+        my $sth = $dbh->prepare("
+            INSERT INTO $table (nick, address, target, message, date)
+            VALUES (?, ?, ?, ?, NOW())
+        ");
+        $sth->bind_param(1, $nick);
+        $sth->bind_param(2, $address);
+        $sth->bind_param(3, $target);
+        $sth->bind_param(4, $message);
+        $sth->execute();
+    }
+    if ($@) {
+        Irssi::print("Bad luck. I can't push to the database. I will try to reconnect...");
         initialise_db();
     }
 }
