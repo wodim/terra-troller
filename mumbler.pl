@@ -38,9 +38,18 @@ sub private_handler {
     my ($server, $msg, $nick, $address) = @_;
 
     if (!$queue{$nick} && $address !~ m/chathispano\.com$/) {
+        # schedule a response
         my $rand_time = int(rand(5)) + 5;
         Irssi::print("Response for \x02$nick\x02 scheduled for \x02$rand_time\x02 seconds.");
         Irssi::timeout_add_once($rand_time * 1000, 'toalleitor', [$nick, $msg]);
+
+        # possible second response
+        my $response_duo = int(rand(100));
+        if ($response_duo < 20) { # ~20%
+            my $rand_time_duo = int(rand(3)) + 1;
+            Irssi::print("Response (duo) for \x02$nick\x02 scheduled for \x02+$rand_time_duo\x02 seconds.");
+            Irssi::timeout_add_once(($rand_time + $rand_time_duo) * 1000, 'toalleitor', [$nick, $msg]);
+        }
         $queue{$nick} = 1;
     }
 
