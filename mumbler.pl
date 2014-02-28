@@ -36,18 +36,18 @@ sub public_handler {
 
     if ($msg !~ m/http/i) {
         my @args = ("-b", "/home/wodim/cobe-terra/cobe-public.brain", "learn-single", clean_colours($msg));
-        eval { system("cobe", @args); }; Irssi::print("Error generating a response...") if $@;
+        eval { system("cobe", @args); }; Irssi::print("Error learning from a public message: $msg") if $@;
     }
 }
 
 sub private_handler {
     my ($server, $msg, $nick, $address) = @_;
 
-    if (!$queue{$nick} && $address !~ m/chathispano\.com$/) {
+    if (!$queue{$nick} && $address !~ m/chathispano\.com$/ && $msg !~ m/http/i) {
         # schedule a response
         my $rand_time = int(rand(5)) + 5;
         Irssi::print("Response for \x02$nick\x02 scheduled for \x02$rand_time\x02 seconds.");
-        my $first_response = generate_response($msg);
+        my $first_response = generate_response($msg, "/home/wodim/cobe-terra/cobe-private.brain");
         Irssi::timeout_add_once($rand_time * 1000, 'toalleitor', [$nick, $first_response]);
 
         # possible second response
@@ -55,7 +55,7 @@ sub private_handler {
         if ($response_duo < 20) { # ~20%
             my $rand_time_duo = int(rand(3)) + 1;
             Irssi::print("Response (duo) for \x02$nick\x02 scheduled for \x02+$rand_time_duo\x02 seconds.");
-            my $response = generate_response($msg);
+            my $response = generate_response($msg, "/home/wodim/cobe-terra/cobe-private.brain");
             if ($response eq $first_response) { # dont repeat yourself
                 Irssi::print("Response (duo) for \x02$nick\x02 unscheduled (duplicate)");
             } else {
@@ -69,7 +69,7 @@ sub private_handler {
 
     if ($msg !~ m/http/i) {
         my @args = ("-b", "/home/wodim/cobe-terra/cobe-private.brain", "learn-single", clean_colours($msg));
-        eval { system("cobe", @args); }; Irssi::print("Error generating a response...") if $@;
+        eval { system("cobe", @args); }; Irssi::print("Error learning from a private message: $msg") if $@;
     }
 }
 
@@ -106,18 +106,23 @@ sub pusher {
 sub clean_colours {
     my ($text) = @_;
 
-    $text =~ s/\x02|\x1f//;
-    $text =~ s/\x03\d\d?(,\d\d?)?//;
+    $text =~ s/\x02|\x1f//g;
+    $text =~ s/\x03\d\d?(,\d\d?)?//g;
 
     $text;
 }
 
 sub generate_response {
-    my ($text) = @_;
+    my ($text, $brain) = @_;
 
-    my @args = ("-b", "/home/wodim/cobe-terra/cobe-private.brain", "oneliner", "--text", clean_colours($text));
+    my @args = ("-b", $brain, "oneliner", "--text", clean_colours($text));
     my $response = "";
-    eval { $response = capture("cobe", @args); }; Irssi::print("Error generating a response...") if $@;
+    eval {
+        $response = capture("cobe", @args);
+    };
+    if ($@) {
+        Irssi::print("Error generating a response...");
+    }
 
     $response;
 }
