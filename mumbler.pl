@@ -5,14 +5,14 @@ use vars qw($VERSION %IRSSI);
 use DBI;
 use IPC::System::Simple qw(capture system);
 
-$VERSION = '1.0';
+$VERSION = "1.0";
 %IRSSI = (
-    authors => '',
-    contact => '',
-    name => '',
-    description => '',
-    license => '',
-    url => '',
+    authors => "",
+    contact => "",
+    name => "",
+    description => "",
+    license => "",
+    url => "",
 );
 
 my ($dbh, %queue);
@@ -20,7 +20,7 @@ my ($dbh, %queue);
 sub initialise_db {
     Irssi::print("Connecting to the database...");
     eval {
-        $dbh = DBI->connect('dbi:mysql:dbname=terra', 'terra', 'terra');
+        $dbh = DBI->connect("dbi:mysql:dbname=terra", "terra", "terra");
     };
     if ($@) {
         Irssi::print("Alright, I couldn't...");
@@ -30,7 +30,7 @@ sub initialise_db {
 sub public_handler {
     my ($server, $msg, $nick, $address, $target) = @_;
 
-    pusher('public', $nick, $address, $target, $msg);
+    pusher("public", $nick, $address, $target, $msg);
 
     return unless $target eq "#terra_chat";
 
@@ -43,12 +43,18 @@ sub public_handler {
 sub private_handler {
     my ($server, $msg, $nick, $address) = @_;
 
-    if (!$queue{$nick} && $address !~ m/chathispano\.com$/ && $msg !~ m/http/i) {
+    if ($msg =~ m/http/i) {
+        Irssi::print("Silencing \x02$nick\x02: they spammed me!");
+        $server->command("silence +$nick!*@*");
+        return;
+    }
+
+    if (!$queue{$nick} && $address !~ m/chathispano\.com$/) {
         # schedule a response
         my $rand_time = int(rand(5)) + 5;
         Irssi::print("Response for \x02$nick\x02 scheduled for \x02$rand_time\x02 seconds.");
         my $first_response = generate_response($msg, "/home/wodim/cobe-terra/cobe-private.brain");
-        Irssi::timeout_add_once($rand_time * 1000, 'toalleitor', [$nick, $first_response]);
+        Irssi::timeout_add_once($rand_time * 1000, "toalleitor", [$nick, $first_response]);
 
         # possible second response
         my $response_duo = int(rand(100));
@@ -59,13 +65,13 @@ sub private_handler {
             if ($response eq $first_response) { # dont repeat yourself
                 Irssi::print("Response (duo) for \x02$nick\x02 unscheduled (duplicate)");
             } else {
-                Irssi::timeout_add_once(($rand_time + $rand_time_duo) * 1000, 'toalleitor', [$nick, $response]);
+                Irssi::timeout_add_once(($rand_time + $rand_time_duo) * 1000, "toalleitor", [$nick, $response]);
             }
         }
         $queue{$nick} = 1;
     }
 
-    pusher('private', $nick, $address, "", $msg);
+    pusher("private", $nick, $address, "", $msg);
 
     if ($msg !~ m/http/i) {
         my @args = ("-b", "/home/wodim/cobe-terra/cobe-private.brain", "learn-single", clean_colours($msg));
@@ -78,7 +84,7 @@ sub toalleitor {
     my ($nick, $msg) = @$data;
 
     if ($msg ne "") {
-        Irssi::active_win()->command('msg '.$nick.' '.clean_colours($msg));
+        Irssi::active_win()->command("msg $nick ".clean_colours($msg));
     }
     delete $queue{$nick};
 }
@@ -129,5 +135,5 @@ sub generate_response {
 
 initialise_db();
 
-Irssi::signal_add('message public', 'public_handler');
-Irssi::signal_add('message private', 'private_handler');
+Irssi::signal_add("message public", "public_handler");
+Irssi::signal_add("message private", "private_handler");
