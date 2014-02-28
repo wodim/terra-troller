@@ -1,15 +1,23 @@
 #!/bin/bash
-echo "Sacando frases..."
-echo "select message from public where message not like '%http%'" | mysql -s -uterra -pterra terra > terra-unsorted.txt
-echo "Filtrando..."
-sort terra-unsorted.txt | uniq > terra.txt
-rm terra-unsorted.txt
-echo "Entrenando..."
+
+if [ -a tmp ]; then rm tmp -rf; fi
 mkdir tmp
 cd tmp
-mv ../terra.txt .
-cobe learn terra.txt
+
+for i in public private;
+do
+    echo "======== $i ========"
+    cp ../cobe-$i.brain* .
+    echo "Sacando frases..."
+    echo "select message from $i where message not like '%http%' and date >= date_sub(now(), interval 15 minute) order by id asc" | mysql -s -uterra -pterra terra > terra-unsorted-$i.txt
+    echo "Filtrando..."
+    sort terra-unsorted-$i.txt | uniq > terra-$i.txt
+    echo "Entrenando..."
+    cobe -b cobe-$i.brain learn terra-$i.txt
+    echo "Hecho."
+done
+
 mv cobe* ..
 cd ..
-rm tmp -r
-echo "Ya está."
+rm tmp -rf
+echo "Fin."

@@ -31,13 +31,6 @@ sub public_handler {
     my ($server, $msg, $nick, $address, $target) = @_;
 
     pusher("public", $nick, $address, $target, $msg);
-
-    return unless $target eq "#terra_chat";
-
-    if ($msg !~ m/http/i) {
-        my @args = ("-b", "/home/wodim/cobe-terra/cobe-public.brain", "learn-single", clean_colours($msg));
-        eval { system("cobe", @args); }; Irssi::print("Error learning from a public message: $msg") if $@;
-    }
 }
 
 sub private_handler {
@@ -72,11 +65,6 @@ sub private_handler {
     }
 
     pusher("private", $nick, $address, "", $msg);
-
-    if ($msg !~ m/http/i) {
-        my @args = ("-b", "/home/wodim/cobe-terra/cobe-private.brain", "learn-single", clean_colours($msg));
-        eval { system("cobe", @args); }; Irssi::print("Error learning from a private message: $msg") if $@;
-    }
 }
 
 sub toalleitor {
