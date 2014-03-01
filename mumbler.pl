@@ -29,12 +29,23 @@ sub initialise_db {
 
 sub public_handler {
     my ($server, $msg, $nick, $address, $target) = @_;
+    my $brain = Irssi::settings_get_str("brain_public_location");
+    return unless (length $brain);
+
+    if (!$queue{$target}) {
+        # schedule a response
+        my $rand_time = int(rand(5)) + 5;
+        Irssi::print("Response for \x02$nick\x02 scheduled for \x02$rand_time\x02 seconds.");
+        my $first_response = generate_response($msg, $brain);
+        Irssi::timeout_add_once($rand_time * 1000, "toalleitor", [$nick, $first_response]);
 
     pusher("public", $nick, $address, $target, $msg);
 }
 
 sub private_handler {
     my ($server, $msg, $nick, $address) = @_;
+    my $brain = Irssi::settings_get_str("brain_private_location");
+    return unless (length $brain);
 
     if ($msg =~ m/http/i) {
         Irssi::print("Silencing \x02$nick\x02: they spammed me!");
@@ -46,7 +57,7 @@ sub private_handler {
         # schedule a response
         my $rand_time = int(rand(5)) + 5;
         Irssi::print("Response for \x02$nick\x02 scheduled for \x02$rand_time\x02 seconds.");
-        my $first_response = generate_response($msg, "/home/wodim/cobe-terra/cobe-private.brain");
+        my $first_response = generate_response($msg, $brain);
         Irssi::timeout_add_once($rand_time * 1000, "toalleitor", [$nick, $first_response]);
 
         # possible second response
@@ -54,7 +65,7 @@ sub private_handler {
         if ($response_duo < 20) { # ~20%
             my $rand_time_duo = int(rand(3)) + 1;
             Irssi::print("Response (duo) for \x02$nick\x02 scheduled for \x02+$rand_time_duo\x02 seconds.");
-            my $response = generate_response($msg, "/home/wodim/cobe-terra/cobe-private.brain");
+            my $response = generate_response($msg, $brain);
             if ($response eq $first_response) { # dont repeat yourself
                 Irssi::print("Response (duo) for \x02$nick\x02 unscheduled (duplicate)");
             } else {
@@ -69,12 +80,12 @@ sub private_handler {
 
 sub toalleitor {
     my ($data) = @_;
-    my ($nick, $msg) = @$data;
+    my ($target, $msg) = @$data;
 
-    if ($msg ne "") {
-        Irssi::active_win()->command("msg $nick ".clean_colours($msg));
+    if (length $msg) {
+        Irssi::active_win()->command("msg $target ".clean_colours($msg));
     }
-    delete $queue{$nick};
+    delete $queue{$target};
 }
 
 sub pusher {
@@ -122,6 +133,16 @@ sub generate_response {
 }
 
 initialise_db();
+
+# locations of brains
+Irssi::settings_add_str("mumbler", "brain_public_location", "");
+Irssi::settings_add_str("mumbler", "brain_private_location", "");
+# channels where blacklist will be applied
+Irssi::settings_add_str("mumbler", "blacklist_channels", "");
+# words that cannot be said in those channels
+Irssi::settings_add_str("mumbler", "blacklist_words", "");
+# channels where you cannot say shit in uppercase
+Irssi::settings_add_str("mumbler", "channels_no_uc", "");
 
 Irssi::signal_add("message public", "public_handler");
 Irssi::signal_add("message private", "private_handler");
