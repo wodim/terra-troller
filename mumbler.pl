@@ -39,7 +39,7 @@ sub public_handler {
         my $rand_time = int(rand($max_delay - $min_delay)) + $min_delay;
         Irssi::print("Response for \x02$target\x02 scheduled for \x02$rand_time\x02 seconds.");
         my $response = generate_response($msg, $brain);
-        Irssi::timeout_add_once($rand_time * 1000, "toalleitor", [$nick, $response]);
+        Irssi::timeout_add_once($rand_time * 1000, "toalleitor", [$target, $response]);
         $queue{$target} = 1;
     }
 
