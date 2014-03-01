@@ -85,7 +85,7 @@ sub kick_handler {
 
     if ($nick eq $server->{nick}) {
         Irssi::print("I was kicked from \x02$channel\x02 (\x02$kicker\x02 -> $reason)");
-        Irssi::print("Last thing I said on \x02$channel\x02 was: $last_message{$channel} .") if exists($last_message{$channel});
+        Irssi::print("Last thing I said on \x02$channel\x02 was: $last_message{$channel}") if exists($last_message{$channel});
     }
 }
 
