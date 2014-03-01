@@ -77,10 +77,11 @@ sub toalleitor {
     my ($target, $msg) = @$data;
     my $blacklist_channels = Irssi::settings_get_str("blacklist_channels");
     my $blacklist_words = Irssi::settings_get_str("blacklist_words");
+    my $blacklist_placeholder = Irssi::settings_get_str("blacklist_placeholder");
 
-    if (elem($target), [split(" ", $blacklist_channels)]) {
+    if (elem($target, [split(" ", $blacklist_channels)])) {
         foreach (split(" ", $blacklist_words)) {
-            $msg =~ s/$_/ouch/gi;
+            $msg =~ s/$_/$blacklist_placeholder/gi;
         }
         $msg = lc $msg
     }
@@ -143,6 +144,8 @@ Irssi::settings_add_str("mumbler", "brain_private_location", "");
 Irssi::settings_add_str("mumbler", "blacklist_channels", "");
 # words that cannot be said in those channels
 Irssi::settings_add_str("mumbler", "blacklist_words", "");
+# what to say instead of censored words?
+Irssi::settings_add_str("mumbler", "blacklist_placeholder", "");
 # min/max time
 Irssi::settings_add_int("mumbler", "public_min_delay", 15);
 Irssi::settings_add_int("mumbler", "public_max_delay", 30);
