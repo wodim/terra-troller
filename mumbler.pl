@@ -16,7 +16,7 @@ $VERSION = "1.0";
     url => "",
 );
 
-my ($dbh, %queue);
+my ($dbh, %queue, %last_message);
 
 sub initialise_db {
     Irssi::print("Connecting to the database...");
@@ -72,6 +72,23 @@ sub private_handler {
     pusher("private", $nick, $address, "", $msg);
 }
 
+sub join_handler {
+    my ($server, $channel, $nick, $address) = @_;
+
+    if ($nick eq $server->{nick}) {
+        Irssi::print("I joined \x02$channel\x02");
+    }
+}
+
+sub kick_handler {
+    my ($server, $channel, $nick, $kicker, $address, $reason) = @_;
+
+    if ($nick eq $server->{nick}) {
+        Irssi::print("I was kicked from \x02$channel\x02 (\x02$kicker\x02 -> $reason)");
+        Irssi::print("Last thing I said on \x02$channel\x02 was: $last_message{$channel} .") if exists($last_message{$channel});
+    }
+}
+
 sub toalleitor {
     my ($data) = @_;
     my ($target, $msg) = @$data;
@@ -83,11 +100,15 @@ sub toalleitor {
         foreach (split(" ", $blacklist_words)) {
             $msg =~ s/$_/$blacklist_placeholder/gi;
         }
-        $msg = lc $msg
+        $msg = lc $msg;
     }
 
     $msg = clean_colours($msg);
-    Irssi::active_win()->command("msg $target $msg") if (length $msg);
+    if (length $msg) {
+        Irssi::active_win()->command("msg $target $msg");
+        $last_message{$target} = $msg;
+    }
+
     delete $queue{$target};
 }
 
@@ -127,6 +148,7 @@ sub generate_response {
     my $response = "";
     eval {
         $response = capture("cobe", @args);
+        $response =~ s/\n//g;
     };
     if ($@) {
         Irssi::print("Error generating a response...");
@@ -154,3 +176,5 @@ Irssi::settings_add_int("mumbler", "private_max_delay", 10);
 
 Irssi::signal_add("message public", "public_handler");
 Irssi::signal_add("message private", "private_handler");
+Irssi::signal_add("message join", "join_handler");
+Irssi::signal_add("message kick", "kick_handler");
