@@ -30,14 +30,18 @@ sub initialise_db {
 sub public_handler {
     my ($server, $msg, $nick, $address, $target) = @_;
     my $brain = Irssi::settings_get_str("brain_public_location");
-    return unless (length $brain);
+    my $min_delay = Irssi::settings_get_int("public_min_delay");
+    my $max_delay = Irssi::settings_get_int("public_max_delay");
+    return unless (length $brain && -e $brain);
 
     if (!$queue{$target}) {
         # schedule a response
-        my $rand_time = int(rand(5)) + 5;
-        Irssi::print("Response for \x02$nick\x02 scheduled for \x02$rand_time\x02 seconds.");
-        my $first_response = generate_response($msg, $brain);
-        Irssi::timeout_add_once($rand_time * 1000, "toalleitor", [$nick, $first_response]);
+        my $rand_time = int(rand($max_delay - $min_delay)) + $min_delay;
+        Irssi::print("Response for \x02$target\x02 scheduled for \x02$rand_time\x02 seconds.");
+        my $response = generate_response($msg, $brain);
+        Irssi::timeout_add_once($rand_time * 1000, "toalleitor", [$nick, $response]);
+        $queue{$target} = 1;
+    }
 
     pusher("public", $nick, $address, $target, $msg);
 }
@@ -45,7 +49,9 @@ sub public_handler {
 sub private_handler {
     my ($server, $msg, $nick, $address) = @_;
     my $brain = Irssi::settings_get_str("brain_private_location");
-    return unless (length $brain);
+    my $min_delay = Irssi::settings_get_int("private_min_delay");
+    my $max_delay = Irssi::settings_get_int("private_max_delay");
+    return unless (length $brain && -e $brain);
 
     if ($msg =~ m/http/i) {
         Irssi::print("Silencing \x02$nick\x02: they spammed me!");
@@ -55,23 +61,10 @@ sub private_handler {
 
     if (!$queue{$nick} && $address !~ m/chathispano\.com$/) {
         # schedule a response
-        my $rand_time = int(rand(5)) + 5;
+        my $rand_time = int(rand($max_delay - $min_delay)) + $min_delay;
         Irssi::print("Response for \x02$nick\x02 scheduled for \x02$rand_time\x02 seconds.");
-        my $first_response = generate_response($msg, $brain);
-        Irssi::timeout_add_once($rand_time * 1000, "toalleitor", [$nick, $first_response]);
-
-        # possible second response
-        my $response_duo = int(rand(100));
-        if ($response_duo < 20) { # ~20%
-            my $rand_time_duo = int(rand(3)) + 1;
-            Irssi::print("Response (duo) for \x02$nick\x02 scheduled for \x02+$rand_time_duo\x02 seconds.");
-            my $response = generate_response($msg, $brain);
-            if ($response eq $first_response) { # dont repeat yourself
-                Irssi::print("Response (duo) for \x02$nick\x02 unscheduled (duplicate)");
-            } else {
-                Irssi::timeout_add_once(($rand_time + $rand_time_duo) * 1000, "toalleitor", [$nick, $response]);
-            }
-        }
+        my $response = generate_response($msg, $brain);
+        Irssi::timeout_add_once($rand_time * 1000, "toalleitor", [$nick, $response]);
         $queue{$nick} = 1;
     }
 
@@ -143,6 +136,11 @@ Irssi::settings_add_str("mumbler", "blacklist_channels", "");
 Irssi::settings_add_str("mumbler", "blacklist_words", "");
 # channels where you cannot say shit in uppercase
 Irssi::settings_add_str("mumbler", "channels_no_uc", "");
+# min/max time
+Irssi::settings_add_int("mumbler", "public_min_delay", 15);
+Irssi::settings_add_int("mumbler", "public_max_delay", 30);
+Irssi::settings_add_int("mumbler", "private_min_delay", 5);
+Irssi::settings_add_int("mumbler", "private_max_delay", 10);
 
 Irssi::signal_add("message public", "public_handler");
 Irssi::signal_add("message private", "private_handler");
