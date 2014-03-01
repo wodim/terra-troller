@@ -4,6 +4,7 @@ use vars qw($VERSION %IRSSI);
 
 use DBI;
 use IPC::System::Simple qw(capture system);
+use Data::Munge;
 
 $VERSION = "1.0";
 %IRSSI = (
@@ -77,7 +78,7 @@ sub toalleitor {
     my $blacklist_channels = Irssi::settings_get_str("blacklist_channels");
     my $blacklist_words = Irssi::settings_get_str("blacklist_words");
 
-    if ($target ~~ split(" ", $blacklist_channels)) {
+    if (elem($target), [split(" ", $blacklist_channels)]) {
         foreach (split(" ", $blacklist_words)) {
             $msg =~ s/$_/ouch/gi;
         }
