@@ -74,10 +74,18 @@ sub private_handler {
 sub toalleitor {
     my ($data) = @_;
     my ($target, $msg) = @$data;
+    my $blacklist_channels = Irssi::settings_get_str("blacklist_channels");
+    my $blacklist_words = Irssi::settings_get_str("blacklist_words");
 
-    if (length $msg) {
-        Irssi::active_win()->command("msg $target ".clean_colours($msg));
+    if ($target ~~ split(" ", $blacklist_channels)) {
+        foreach (split(" ", $blacklist_words)) {
+            $msg =~ s/$_/ouch/gi;
+        }
+        $msg = lc $msg
     }
+
+    $msg = clean_colours($msg);
+    Irssi::active_win()->command("msg $target $msg") if (length $msg);
     delete $queue{$target};
 }
 
@@ -134,8 +142,6 @@ Irssi::settings_add_str("mumbler", "brain_private_location", "");
 Irssi::settings_add_str("mumbler", "blacklist_channels", "");
 # words that cannot be said in those channels
 Irssi::settings_add_str("mumbler", "blacklist_words", "");
-# channels where you cannot say shit in uppercase
-Irssi::settings_add_str("mumbler", "channels_no_uc", "");
 # min/max time
 Irssi::settings_add_int("mumbler", "public_min_delay", 15);
 Irssi::settings_add_int("mumbler", "public_max_delay", 30);
