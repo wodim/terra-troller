@@ -92,11 +92,11 @@ sub kick_handler {
 sub toalleitor {
     my ($data) = @_;
     my ($target, $msg) = @$data;
-    my $blacklist_channels = Irssi::settings_get_str("blacklist_channels");
+    my $blacklist_exempt_channels = Irssi::settings_get_str("blacklist_exempt_channels");
     my $blacklist_words = Irssi::settings_get_str("blacklist_words");
     my $blacklist_placeholder = Irssi::settings_get_str("blacklist_placeholder");
 
-    if (elem($target, [split(" ", $blacklist_channels)])) {
+    if (!elem($target, [split(" ", $blacklist_exempt_channels)])) {
         foreach (split(" ", $blacklist_words)) {
             $msg =~ s/$_/$blacklist_placeholder/gi;
         }
@@ -162,8 +162,8 @@ initialise_db();
 # locations of brains
 Irssi::settings_add_str("mumbler", "brain_public_location", "");
 Irssi::settings_add_str("mumbler", "brain_private_location", "");
-# channels where blacklist will be applied
-Irssi::settings_add_str("mumbler", "blacklist_channels", "");
+# channels where blacklist will NOT be applied (lol ux)
+Irssi::settings_add_str("mumbler", "blacklist_exempt_channels", "");
 # words that cannot be said in those channels
 Irssi::settings_add_str("mumbler", "blacklist_words", "");
 # what to say instead of censored words?
