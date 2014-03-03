@@ -96,7 +96,7 @@ sub toalleitor {
     my $blacklist_words = Irssi::settings_get_str("blacklist_words");
     my $blacklist_placeholder = Irssi::settings_get_str("blacklist_placeholder");
 
-    if (!elem($target, [split(" ", $blacklist_exempt_channels)])) {
+    if (!elem($target, [split(" ", $blacklist_exempt_channels)]) && $target =~ m/^#/) {
         foreach (split(" ", $blacklist_words)) {
             $msg =~ s/$_/$blacklist_placeholder/gi;
         }
